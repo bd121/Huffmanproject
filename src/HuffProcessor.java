@@ -1,3 +1,4 @@
+import java.util.PriorityQueue;
 
 /**
  * Although this class has a history of several years,
@@ -133,7 +134,7 @@ public class HuffProcessor {
     private void codingHelper(HuffNode current, String path, String[] encodings) {
     	
     	//base case: current node is a leaf
-        if (current.left() == null && current.right() == null){ 
+        if (current.myLeft == null && current.myRight == null){ 
         	
             int charIndex = current.myValue;
             encodings[charIndex] = path;
