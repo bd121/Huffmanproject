@@ -203,27 +203,25 @@ public class HuffProcessor {
 	 *            Buffered bit stream writing to the output file.
 	 */
 	public void decompress(BitInputStream in, BitOutputStream out){
-		//Read the 32-bit "magic" number as a check on whether the file is Huffman-coded
+		
+		//1. Read the 32-bit "magic" number as a check on whether the file is Huffman-coded
 		int bits = in.readBits(BITS_PER_INT);
         if (bits  != HUFF_TREE) {
             throw new HuffException("illegal header starts with " + bits);
         }
         
-        //Read the tree used to de_compress, this is the same tree that was used to
+        //2. Read the tree used to de_compress, this is the same tree that was used to
         //compress, recreate tree from header
         HuffNode root = readTreeHeader(in);
         if(myDebugLevel >= DEBUG_HIGH)
         	printNode(root, 0);
         
-        //Read the bits from the compressed file and use them to traverse root-to-leaf
+        //3. Read the bits from the compressed file and use them to traverse root-to-leaf
         //paths, writing leaf values to the output file. Stop when finding PSEUDO_EOF
+        
         readCompressedBits(root, in, out);
         
-		while (true){
-			int val = in.readBits(BITS_PER_WORD);
-			if (val == -1) break;
-			out.writeBits(BITS_PER_WORD, val);
-		}
+        //4. Close the output file
 		out.close();
 	}
 	
@@ -245,7 +243,10 @@ public class HuffProcessor {
         	
         	//read in the 9 bits to get the character value for that leave 
         	//and put it in the HuffNode
-            int value = in.readBits(9);
+        	int value = in.readBits(BITS_PER_WORD+1);
+            //int value = in.readBits(9);
+            if(myDebugLevel >= DEBUG_HIGH)
+            	System.out.printf("readTreeHeader-> Value %d, Char: %c \n", value, (char)value);
             return new HuffNode(value,0);
         }
         
@@ -270,9 +271,9 @@ public class HuffProcessor {
             else{
                 current = current.myRight; //1 is right
             }
-            if (current.myLeft == null){
+            if (current.myLeft == null && current.myRight == null){
                 if (current.myValue == PSEUDO_EOF)
-                    return;
+                    break;
                 else{
 	                out.writeBits(BITS_PER_WORD, current.myValue);
 	                if(myDebugLevel >= DEBUG_HIGH)
