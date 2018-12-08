@@ -46,25 +46,11 @@ public class HuffProcessor {
 		//1. Determine the frequency of every eight-bit character/chunk in the input file
 		int[] freqCounts = readForCounts(in);
 		
-		if(myDebugLevel >= DEBUG_HIGH) {
-	        System.out.println("Frequncy Counts: ");
-	        printIntList(freqCounts);
-		}
-		
 		//2. Create the Huffman tree for encodings
-        HuffNode root = makeTreeFromCounts(freqCounts);
-        
-        if(myDebugLevel >= DEBUG_HIGH) {
-	        System.out.println(" Huffman tree for encodings: ");
-	        printNode(root, 0);
-        }
+        HuffNode root = makeTreeFromCounts(freqCounts);        
         
         //3. Create the encodings for each eight-bit character chunk
         String[] codings = makeCodingsfromTree(root);
-        if(myDebugLevel >= DEBUG_HIGH) {
-	        System.out.println("Coding String Array: ");
-	        printList(codings);
-        }
         
         //4. Write the magic number and the tree to the header of the compressed file
         out.writeBits(BITS_PER_INT, HUFF_TREE);
@@ -78,7 +64,7 @@ public class HuffProcessor {
 		out.close();
 	}
 	
-	public int[] readForCounts(BitInputStream in)
+	private int[] readForCounts(BitInputStream in)
 	{
 		int[] counts = new int[ALPH_SIZE+1];
         while (true){
@@ -102,7 +88,7 @@ public class HuffProcessor {
 	}
 	
     //create Huffman tree
-    public HuffNode makeTreeFromCounts(int[] freqCounts){
+    private HuffNode makeTreeFromCounts(int[] freqCounts){
         PriorityQueue<HuffNode> pq = new PriorityQueue<HuffNode>();
         for (int i=0; i<ALPH_SIZE+1; i++){
           if (freqCounts[i] > 0){ //only make Huffnodes of characters that actually occur in the text
@@ -173,7 +159,7 @@ public class HuffProcessor {
     }
    
     //compress and write the body of the out file
-    public void writeCompressedBits(BitInputStream in, BitOutputStream out, String[] codings){
+    private void writeCompressedBits(BitInputStream in, BitOutputStream out, String[] codings){
     	String code = "";
     	while (true){
         	//read the in file by increments of 8 bits
@@ -213,8 +199,6 @@ public class HuffProcessor {
         //2. Read the tree used to de_compress, this is the same tree that was used to
         //compress, recreate tree from header
         HuffNode root = readTreeHeader(in);
-        if(myDebugLevel >= DEBUG_HIGH)
-        	printNode(root, 0);
         
         //3. Read the bits from the compressed file and use them to traverse root-to-leaf
         //paths, writing leaf values to the output file. Stop when finding PSEUDO_EOF
@@ -226,7 +210,7 @@ public class HuffProcessor {
 	}
 	
 	// recreate tree from header
-    public HuffNode readTreeHeader(BitInputStream in){
+    private HuffNode readTreeHeader(BitInputStream in){
         int bit = in.readBits(1);
         
         if (bit == -1) 
@@ -244,7 +228,6 @@ public class HuffProcessor {
         	//read in the 9 bits to get the character value for that leave 
         	//and put it in the HuffNode
         	int value = in.readBits(BITS_PER_WORD+1);
-            //int value = in.readBits(9);
             if(myDebugLevel >= DEBUG_HIGH)
             	System.out.printf("readTreeHeader-> Value %d, Char: %c \n", value, (char)value);
             return new HuffNode(value,0);
@@ -258,7 +241,7 @@ public class HuffProcessor {
      *  paths, writing leaf values to the output file. Stop when finding PSEUDO_EOF
      * 
      */
-    public void readCompressedBits(HuffNode root, BitInputStream in, BitOutputStream out){
+    private void readCompressedBits(HuffNode root, BitInputStream in, BitOutputStream out){
         HuffNode current = root; //initialize current node to root
        while(true){
             int bit = in.readBits(1);
@@ -284,61 +267,5 @@ public class HuffProcessor {
        }//While loop
     }
     
-    public void printNode(HuffNode root, int n) {
-
-    	HuffNode l = root.myLeft;
-    	HuffNode r = root.myRight;
-    	
-    	if(l!=null && r!=null) {
-    		System.out.printf("root->node# %d: ", n);
-			System.out.printf("Value: %d, Weight: %d, left: %d, leftweight: %d, right: %d, rightweight: %d \n", 
-						root.myValue, root.myWeight, root.myLeft.myValue,root.myLeft.myWeight, root.myRight.myValue, root.myRight.myWeight);
-			printNode(root.myLeft, n+1);
-			printNode(root.myRight, n+2);
-    	}
-       	
-       	if(l!=null && r==null) {
-       		System.out.printf("Left->node# %d: ", n);
-			System.out.printf("Value: %d, Weight: %d, left: %d, leftweight: %d \n", 
-						root.myValue, root.myWeight, root.myLeft.myValue, root.myLeft.myWeight);
-			printNode(root.myLeft, n+1);
-       	}
-       	
-       	if(l==null && r!=null) {
-       		System.out.printf("right->node# %d: ", n);
-			System.out.printf("Value: %d, Weight: %d, right: %d, rightweight: %d \n", 
-						root.myValue, root.myWeight,root.myRight.myValue, root.myRight.myWeight);
-			printNode(root.myRight, n+1);
-       	}
-       	
-       	if(l==null && r==null) {
-       		System.out.printf("Leaf->node# %d: ", n);
-    		System.out.printf("Leaf->: Value: %d, Weight: %d\n", root.myValue, root.myWeight);
-       	}
-       	
-       	System.out.println();
-    	
-    }
-    
-	 static void printList(String [] a) {
-		 int ct = 0;
-		 for (int i = 0; i < a.length; i++)
-			 if(a[i]!=null) {
-				System.out.println(a[i]);
-				ct++;
-			 }
-		 System.out.println("valid elements#: " + ct);
-		 System.out.println("Array Length: " + a.length);
-	 }
-	 
-	 static void printIntList(int [] a) {
-		 int ct = 0;
-		 for (int i = 0; i < a.length; i++)
-			 if(a[i]!=0) {
-				System.out.printf("elenent: %d, value: %d \n", i, a[i]);
-				ct++;
-			 }
-		 System.out.println("valid elements#: " + ct);
-		 System.out.println("Array Length: " + a.length);
-	 }
+  
 }
